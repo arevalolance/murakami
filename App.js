@@ -4,6 +4,9 @@ import { NavigationContainer } from "@react-navigation/native"
 import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import HomeScreen from "./src/screens/home"
 import PlayerScreen from './src/screens/player';
+import { NativeModules } from 'react-native';
+NativeModules.DevSettings.setIsDebuggingRemotely(true);
+
 
 const Stack = createNativeStackNavigator();
 

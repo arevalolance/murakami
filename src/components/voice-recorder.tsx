@@ -115,11 +115,13 @@ const VoiceRecorder = ({ setItems }) => {
   // };
 
   const handleSave = () => {
+    console.log('test fetch');
     axios
-      .get('https://172.31.44.33:8000/test/health-check')
-
+      .get(
+        'https://ab08-2001-4452-419-b100-91cb-b495-2051-f899.ngrok-free.app/test/health-check'
+      )
       .then((response) => {
-        console.log(response.data);
+        console.log(JSON.stringify(response.data));
       })
       .catch((err) => console.log(err));
   };
