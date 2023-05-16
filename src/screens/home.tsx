@@ -17,11 +17,6 @@ const HomeScreen = ({ route, navigation }) => {
   const [items, setItems] = useState<AudioData[]>([]);
 
   useEffect(() => {
-    axios
-      .get('http://172.22.29.35:8001/test/health-check')
-      .then((response) => console.log(response.data))
-      .catch((err) => console.log(err));
-
     async function getData() {
       try {
         const value = await AsyncStorage.getItem('@audio_List');
@@ -46,7 +41,7 @@ const HomeScreen = ({ route, navigation }) => {
                 key={item.uuid}
                 title={item.uuid}
                 created_at={item.created_at}
-                status={item.status}
+                local_uri={item.local_uri}
                 navigation={navigation}
               />
             ))}

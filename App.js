@@ -5,8 +5,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import HomeScreen from "./src/screens/home"
 import PlayerScreen from './src/screens/player';
 import { NativeModules } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 NativeModules.DevSettings.setIsDebuggingRemotely(true);
-
+// AsyncStorage.clear()
 
 const Stack = createNativeStackNavigator();
 

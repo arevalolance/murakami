@@ -16,7 +16,9 @@ import {
 import { Recording } from 'expo-av/build/Audio';
 import AudioPlayer from './audio-player';
 import { AudioData } from '../lib/types';
-import axios from 'axios';
+import * as FileSystem from 'expo-file-system';
+import { saveLocal } from '../lib/save-local';
+import { BASE_URL } from '../lib/constants';
 
 const VoiceRecorder = ({ setItems }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -26,104 +28,71 @@ const VoiceRecorder = ({ setItems }) => {
   const [duration, setDuration] = useState<number>(0);
   const [uri, setURI] = useState<string>();
 
-  // const handleSave = async () => {
-  //   setIsRecording(false);
-  //   setRecording(null);
-  //   togglePlayer(false);
-  //   setDuration(0);
+  const uploadAudio = async (uri) => {
+    console.log('claled upload');
+    try {
+      const fileUri = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-  //   // try {
-  //   // list: [{uuid: "", local_uri: "", processed_uri: "", created_at: "", status: ""}]
-  //   const currList = await AsyncStorage.getItem('@audio_List');
-  //   if (currList !== null) {
-  //     const uuid = '';
-  //     const local_uri = uri;
-  //     const processed_uri = '';
-  //     const created_at = new Date();
-  //     const status = 'pending';
+      // console.log(fileUri);
+      console.log(`http://${BASE_URL}/upload`);
+      const response = await fetch(
+        `http://${BASE_URL}/upload`,
+        // '',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            denoise: false,
+            audio: fileUri,
+          }),
+        }
+      );
 
-  //     const response = await fetch(uri);
-  //     const blob = await response.blob();
+      const result = await response.json();
 
-  //     console.log('blobbing');
+      return result['generated_id'];
+    } catch (error) {
+      console.error('THIS IS AN ERROR', error);
+    }
+  };
 
-  //     const formData = new FormData();
-  //     formData.append('file', blob);
+  const handleSave = async () => {
+    if (recording || isRecording) {
+      await handlePressOut();
+    }
+    setIsRecording(false);
+    setRecording(null);
+    togglePlayer(false);
+    setDuration(0);
 
-  //     console.log('here');
+    const uuid = '';
+    const local_uri = uri;
+    const processed_uri = '';
+    const created_at = new Date();
+    const status = 'pending';
 
-  //     // Send the POST request to the server
-  //     const uploadUrl = 'http://192.168.137.1:8000/upload';
-  //     // const apiResponse = await fetch(uploadUrl, {
-  //     //   method: 'POST',
-  //     //   headers: {
-  //     //     'Content-Type': 'multipart/form-data',
-  //     //   },
-  //     //   body: formData,
-  //     // });
-  //     fetch('http://localhost:8000/test/health-check').then((res) =>
-  //       console.log(JSON.stringify(res))
-  //     );
-  //     console.log('repsonse here');
+    try {
+      const generatedId = await uploadAudio(uri);
+      console.log('GENERATED ID', generatedId);
 
-  //     // if (!apiResponse.ok) {
-  //     //   const errorData = await apiResponse.json();
-  //     //   console.error(errorData);
-  //     // } else {
-  //     //   const responseData = await apiResponse.json();
-  //     //   console.log(responseData);
-  //     // }
+      const savedData = await saveLocal(
+        generatedId,
+        local_uri,
+        processed_uri,
+        created_at,
+        status
+      );
 
-  //     const newList = JSON.parse(currList);
-  //     newList.push({
-  //       uuid: uuid,
-  //       local_uri: local_uri,
-  //       processed_uri: processed_uri,
-  //       created_at: created_at,
-  //       status: status,
-  //     });
-  //     await AsyncStorage.setItem(
-  //       '@audio_List',
-  //       JSON.stringify({ list: newList })
-  //     ); // convert newList to string before storing in AsyncStorage
-  //     setItems(newList);
-  //   } else {
-  //     const uuid = '';
-  //     const local_uri = uri;
-  //     const processed_uri = '';
-  //     const created_at = new Date();
-  //     const status = 'pending';
+      console.log('SAVING TO LOCAL:', savedData);
 
-  //     const newList = [
-  //       {
-  //         uuid: uuid,
-  //         local_uri: local_uri,
-  //         processed_uri: processed_uri,
-  //         created_at: created_at,
-  //         status: status,
-  //       },
-  //     ];
-  //     await AsyncStorage.setItem(
-  //       '@audio_List',
-  //       JSON.stringify({ list: newList })
-  //     ); // convert newList to string before storing in AsyncStorage
-  //     setItems(newList);
-  //   }
-  //   // } catch (e) {
-  //   //   console.log(e);
-  //   // }
-  // };
-
-  const handleSave = () => {
-    console.log('test fetch');
-    axios
-      .get(
-        'https://ab08-2001-4452-419-b100-91cb-b495-2051-f899.ngrok-free.app/test/health-check'
-      )
-      .then((response) => {
-        console.log(JSON.stringify(response.data));
-      })
-      .catch((err) => console.log(err));
+      setItems((prev) => [...prev, savedData]);
+    } catch (e) {
+      console.log('save error', e);
+    }
   };
 
   const handlePressIn = async () => {
@@ -162,7 +131,6 @@ const VoiceRecorder = ({ setItems }) => {
       await recording.startAsync();
       setRecording(recording);
       console.log('RECORDING STARTED');
-      console.log('JKSAOPDKASPODKASP', recording);
 
       await Animated.spring(scaleAnim, {
         toValue: 0.9,
@@ -170,6 +138,9 @@ const VoiceRecorder = ({ setItems }) => {
       }).start();
     } catch (err) {
       console.log(JSON.stringify(err));
+      setIsRecording(false);
+      togglePlayer(false);
+      setDuration(0);
       setRecording(undefined);
     }
   };
@@ -218,9 +189,12 @@ const VoiceRecorder = ({ setItems }) => {
             />
             <Button
               onPress={() => {
-                togglePlayer(false);
+                if (recording) recording.stopAndUnloadAsync();
                 setDuration(0);
-                setRecording(null);
+                setRecording(undefined);
+                setIsRecording(false);
+                setURI(undefined);
+                togglePlayer(false);
               }}
               title="Close"
             />
@@ -229,8 +203,7 @@ const VoiceRecorder = ({ setItems }) => {
         </>
       ) : null}
       <TouchableWithoutFeedback
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        onPress={isRecording ? handlePressOut : handlePressIn}
       >
         <View
           style={[
@@ -279,6 +252,13 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
+    backgroundColor: '#FF3B30',
+    position: 'absolute',
+  },
+  stopButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 5,
     backgroundColor: '#FF3B30',
     position: 'absolute',
   },

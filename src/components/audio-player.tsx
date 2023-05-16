@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  AppState,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import PlayIcon from '../icons/play';
@@ -23,17 +24,46 @@ const AudioPlayer = ({
   const [position, setPosition] = useState(0);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const appState = useRef(AppState.currentState);
+  const [appStateVisible, setAppStateVisible] = useState(
+    appState.current
+  );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      (nextAppState) => {
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextAppState === 'active'
+        ) {
+          console.log('App has come to the foreground!');
+        }
+
+        appState.current = nextAppState;
+        setAppStateVisible(appState.current);
+        console.log('AppState', appState.current);
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const playSound = async () => {
     try {
-      console.log('TRING TO PLAY');
+      console.log('TRING TO PLAY', uri);
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri },
+        {
+          uri,
+        },
         {
           shouldPlay: true,
           positionMillis: position == duration ? 0 : position,
         }
       );
+      console.log(sound);
 
       setSound(newSound);
       setIsPlaying(true);
@@ -88,6 +118,34 @@ const AudioPlayer = ({
   };
 
   useEffect(() => {
+    const loadSound = async () => {
+      try {
+        console.log('TRING TO LOAD', uri);
+        stopSound();
+
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          {
+            uri,
+          },
+          {
+            shouldPlay: false,
+            positionMillis: position == duration ? 0 : position,
+          }
+        );
+
+        setSound(newSound);
+        setPosition(0);
+        setIsPlaying(false);
+        newSound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
+      } catch (error) {
+        console.log('Error playing sound:', error);
+      }
+    };
+
+    loadSound();
+  }, [uri]);
+
+  useEffect(() => {
     return () => {
       Audio.Sound.createAsync(
         { uri },
@@ -98,17 +156,18 @@ const AudioPlayer = ({
       )
         .then((res) => {
           const { sound } = res;
+          setIsPlaying(false);
 
           setSound(sound);
           sound.stopAsync();
           sound.unloadAsync();
-          setIsPlaying(false);
         })
-        .catch(() => {
+        .catch((err) => {
           console.log('ohno');
+          console.log(err);
         });
     };
-  }, []);
+  }, [uri]);
 
   const handlePressIn = () => {
     console.log('ttestlksealp;fk');

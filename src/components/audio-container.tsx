@@ -1,33 +1,35 @@
 import React from 'react';
 import {
-  Button,
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
 } from 'react-native';
+import { getTimeElapsed } from '../lib/time-elapsed';
 
 const AudioContainer = ({
   title,
   created_at,
-  status,
+  local_uri,
   navigation,
 }) => {
   return (
     <TouchableOpacity
       onPress={() =>
         navigation.navigate('Player', {
-          uri: 'https://p.scdn.co/mp3-preview/49dd1bf7def316c2dcd53fc37350ad6ad03e2c8b?cid=cfe923b2d660439caf2b557b21f31221',
+          id: title,
+          local_uri: local_uri,
         })
       }
     >
       <View style={styles.container}>
         <Text style={{ fontSize: 15, fontWeight: 'bold' }}>
-          {title}
+          {title && JSON.stringify(title).replace('"', '')}
         </Text>
         <View style={styles.subHeader}>
-          <Text>Created at: {created_at}</Text>
-          <Text>Status: {status}</Text>
+          <Text>
+            Created at: {created_at && getTimeElapsed(created_at)}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
